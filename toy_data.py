@@ -1,7 +1,7 @@
 """Module for creating toy cluster data"""
 import matplotlib.pyplot as plt
-from matplotlib import style
 import numpy as np
+from matplotlib import style
 
 style.use('ggplot')
 

@@ -1,8 +1,7 @@
 """Module for generating cluster datasets"""
 
-from sklearn.datasets import make_blobs
 import matplotlib.pyplot as plt
-
+from sklearn.datasets import make_blobs
 
 SAMPLE_DATA, SAMPLE_CLUSTERS = make_blobs(n_samples=100, n_features=2, centers=3)
 

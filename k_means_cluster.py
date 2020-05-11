@@ -11,12 +11,14 @@ Methodology for the K Means algorithm:
     Repeat steps 3-5 until optimized (centroids no longer moving)
 
 """
-from typing import Dict, Any, Union, List
 from collections import defaultdict
+from typing import Any, Dict, List, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
-from k_means.toy_data import TOY_DATA
 
+from k_means.toy_data import TOY_DATA
 
 ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 
@@ -47,7 +49,6 @@ class KMeansCluster:
             return np.array(data)
         if isinstance(data, DataFrame):
             return DataFrame.values
-
         raise TypeError
 
     def get_distance(self, arr_1: ClusterData, arr_2: ClusterData):
@@ -80,36 +81,57 @@ class KMeansCluster:
             self.centroids[cluster] = new_centroid
         return self
 
-    def meets_tolerance(self, old_centroids: np.ndarray, new_centroids: np.ndarray) -> bool:
+    def meets_tolerance(self, old_centroids: ClusterData, new_centroids: ClusterData) -> bool:
         """Function to detect convergence"""
         return np.abs(self.get_distance(old_centroids, new_centroids)) <= self.tol
 
-    def fit(self, data: ClusterData):
+    def fit(self, data: ClusterData, verbose=0):
         """
         Function to fit K-Means object to dataset.
 
         :param data: Dataset of type [list, DataFrame or NDArray]
+        :param verbose: Integer [0, 1, 2] indicating verbosity of printouts
         :return: Dictionary of clusters and points
         """
+        if verbose not in {0, 1, 2}:
+            raise ValueError('Verbose must be set to {0, 1, 2}')
         data = self._convert_to_array(data)
         self.initialize_centroids(data).assign_cluster(data)
-        print(f'Initial clusters: {self.clusters.items()}')
+        if verbose > 0:
+            print(f'Initial clusters: {self.clusters.items()}')
+        converged = {}
         i = 0
         while i <= self.max_iter:
-            old_centroids = list(self.centroids.values())
-            new_centroids = list(self.update_centroid().centroids.values())
-            if self.meets_tolerance(old_centroids, new_centroids):
+            for centroid in self.centroids:
+                old_centroid = self.centroids[centroid]
+                new_centroid = self.update_centroid().centroids[centroid]
+                converged[centroid] = self.meets_tolerance(old_centroid, new_centroid)
+            if verbose > 1:
+                print(converged.values())
+            if all(converged.values()):
                 break
             self.assign_cluster(data)
             i += 1
-        print(f'Final clusters: {self.clusters.items()}')
+        if verbose > 0:
+            print(f'Final clusters: {self.clusters.items()}')
+            print(f'Converged in {i} iterations.')
         return self.clusters.items()
+
+    def plot(self) -> None:
+        """Plot clusters and centroids"""
+        for cluster in self.clusters.values():
+            plt.scatter(np.array(cluster)[:, 0], np.array(cluster)[:, 1], alpha=0.5)
+        for point in self.centroids.values():
+            plt.scatter(point[0], point[1], marker='^', s=100)
+        plt.show()
 
 
 def main():
     """Main function"""
     kmeans = KMeansCluster()
     kmeans.fit(TOY_DATA)
+    print(list(kmeans.clusters.values()))
+    kmeans.plot()
 
 
 if __name__ == '__main__':
