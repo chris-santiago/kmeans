@@ -62,7 +62,7 @@ class KMeansCluster:
         arr_2 = self._convert_to_array(arr_2)
         if self.method == 'manhattan':
             return cityblock(arr_1, arr_2)
-        return np.linalg.norm(arr_1 - arr_2) ** 2
+        return np.linalg.norm(arr_1 - arr_2)
 
     @staticmethod
     def find_min_idx(distances: List) -> int:
