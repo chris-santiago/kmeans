@@ -37,6 +37,7 @@ class KMeansCluster:
 
         self.centroids: Dict[int, Any] = {}
         self.clusters: Dict[int, Any] = defaultdict(list)
+        self.cluster_distances: Dict[int, Any] = {}
 
     def initialize_centroids(self, data: ClusterData) -> "KMeansCluster":
         """Get initial centroids"""
@@ -134,13 +135,28 @@ class KMeansCluster:
             plt.scatter(point[0], point[1], marker='^', s=100)
         plt.show()
 
+    def _get_cluster_ssd(self) -> Dict[int, Any]:
+        cluster_distances: Dict[int, Any] = {}
+        for cluster in self.centroids:
+            centroid_dist = 0
+            for point in self.clusters[cluster]:
+                centroid_dist += self.get_distance(self.centroids[cluster], point)
+            cluster_distances[cluster] = centroid_dist
+        return cluster_distances
+
+    def eval_metrics(self) -> Dict[str, Union[Dict[int, float], Dict[str, float]]]:
+        clusters: Dict[int, float] = self._get_cluster_ssd()
+        total_ssd: float = sum(clusters.values())
+        return {'cluster_dist': clusters, 'total_dist': total_ssd}
+
 
 def main():
     """Main function"""
-    kmeans = KMeansCluster(method='manhattan')
+    kmeans = KMeansCluster()
     kmeans.fit(TOY_DATA)
     print(list(kmeans.clusters.values()))
     kmeans.plot()
+    kmeans.eval_metrics()
 
 
 if __name__ == '__main__':
