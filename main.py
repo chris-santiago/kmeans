@@ -5,9 +5,20 @@ from k_means.make_clusters import SAMPLE_DATA
 
 def main():
     """Implement K-Means using generated data"""
-    kmeans = KMeansCluster(k=3, max_iter=100, method='mahattan')
+    kmeans = KMeansCluster(k=3, max_iter=100, method='manhattan')
     kmeans.fit(SAMPLE_DATA, verbose=1)
     kmeans.plot()
 
 
-main()
+def from_text(file):
+    points = []
+    with open(file, 'r') as text_file:
+        for line in text_file.readlines():
+            points.append(tuple(line.strip().split('    ')))
+    points = [(int(a), int(b)) for a, b in points]
+    kmeans = KMeansCluster(k=15, method='euclidean', tol=0.00001)
+    kmeans.fit(points, verbose=1)
+    kmeans.plot()
+
+
+from_text('s2.txt')
