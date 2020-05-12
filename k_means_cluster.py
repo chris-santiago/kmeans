@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
+from scipy.spatial.distance import cityblock
 
 from k_means.toy_data import TOY_DATA
 
@@ -25,10 +26,14 @@ ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 
 class KMeansCluster:
     """Simple K-Means Clustering Model"""
-    def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300):
+    def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300,
+                 method: str = 'euclidean'):
+        if method not in {'euclidean', 'mahattan'}:
+            raise ValueError('Method must be one of "euclidean" or "manhattan"')
         self.k = k
         self.tol = tol
         self.max_iter = max_iter
+        self.method = method
 
         self.centroids: Dict[int, Any] = {}
         self.clusters: Dict[int, Any] = defaultdict(list)
@@ -55,7 +60,9 @@ class KMeansCluster:
         """Calculate distance between two points"""
         arr_1 = self._convert_to_array(arr_1)
         arr_2 = self._convert_to_array(arr_2)
-        return np.linalg.norm(arr_1 - arr_2)
+        if self.method == 'manhattan':
+            return cityblock(arr_1, arr_2)
+        return np.linalg.norm(arr_1 - arr_2) ** 2
 
     @staticmethod
     def find_min_idx(distances: List) -> int:
@@ -128,7 +135,7 @@ class KMeansCluster:
 
 def main():
     """Main function"""
-    kmeans = KMeansCluster()
+    kmeans = KMeansCluster(method='manhattan')
     kmeans.fit(TOY_DATA)
     print(list(kmeans.clusters.values()))
     kmeans.plot()

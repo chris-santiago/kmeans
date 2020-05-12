@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_blobs
 
-SAMPLE_DATA, SAMPLE_CLUSTERS = make_blobs(n_samples=100, n_features=2, centers=3)
+SAMPLE_DATA, SAMPLE_CLUSTERS = make_blobs(n_samples=1000, n_features=2, centers=3,
+                                          cluster_std=2)
 
 
 def main():
