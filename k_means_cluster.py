@@ -9,10 +9,9 @@ Methodology for the K Means algorithm:
     Classify other featuresets as same as closest centroid
     Take mean of each class (mean of all featuresets by class), making that mean the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
-
 """
 from collections import defaultdict
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +25,7 @@ ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 
 class KMeansCluster:
     """Simple K-Means Clustering Model"""
+
     def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300,
                  method: str = 'euclidean'):
         if method not in {'euclidean', 'manhattan'}:
@@ -51,14 +51,14 @@ class KMeansCluster:
         """Function to convert data into ndarray"""
         if isinstance(data, np.ndarray):
             return data
-        if isinstance(data, List):
+        if isinstance(data, (List, Tuple)):
             return np.array(data)
         if isinstance(data, DataFrame):
             return DataFrame.values
         raise TypeError
 
-    def get_distance(self, arr_1: ClusterData, arr_2: ClusterData):
-        """Calculate distance between two points"""
+    def get_distance(self, arr_1: ClusterData, arr_2: ClusterData) -> float:
+        """Calculate squared distance between two points"""
         arr_1 = self._convert_to_array(arr_1)
         arr_2 = self._convert_to_array(arr_2)
         if self.method == 'manhattan':
@@ -132,10 +132,10 @@ class KMeansCluster:
         for cluster in self.clusters.values():
             plt.scatter(np.array(cluster)[:, 0], np.array(cluster)[:, 1], alpha=0.5)
         for point in self.centroids.values():
-            plt.scatter(point[0], point[1], marker='^', s=100)
+            plt.scatter(point[0], point[1], marker='x', s=100, c='red')
         plt.show()
 
-    def _get_cluster_ssd(self) -> Dict[int, Any]:
+    def get_cluster_ssd(self) -> Dict[int, Any]:
         cluster_distances: Dict[int, Any] = {}
         for cluster in self.centroids:
             centroid_dist = 0
@@ -145,7 +145,7 @@ class KMeansCluster:
         return cluster_distances
 
     def eval_metrics(self) -> Dict[str, Union[Dict[int, float], Dict[str, float]]]:
-        clusters: Dict[int, float] = self._get_cluster_ssd()
+        clusters: Dict[int, float] = self.get_cluster_ssd()
         total_ssd: float = sum(clusters.values())
         return {'cluster_dist': clusters, 'total_dist': total_ssd}
 
