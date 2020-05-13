@@ -1,7 +1,7 @@
 """
 A simple K-Medoids implementation
 
-Methodology for the K Means algorithm:
+Methodology for the K-Medoids algorithm:
 
     Choose value for K
     Randomly select K featuresets to start as your centroids
@@ -62,10 +62,10 @@ class KMedoidsCluster(KMeansCluster):
 
 def main():
     """Main function"""
-    kmediods = KMedoidsCluster(k=3, method='manhattan')
-    kmediods.fit(SAMPLE_DATA, verbose=1)
-    kmediods.plot()
-    kmediods.eval_metrics()
+    kmedoids = KMedoidsCluster(k=3, method='manhattan')
+    kmedoids.fit(SAMPLE_DATA, verbose=1)
+    kmedoids.plot()
+    kmedoids.eval_metrics()
 
 
 if __name__ == '__main__':
