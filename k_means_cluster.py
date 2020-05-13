@@ -18,7 +18,7 @@ import numpy as np
 from pandas import DataFrame
 from scipy.spatial.distance import cityblock
 
-from k_means.toy_data import TOY_DATA
+from k_means.make_clusters import SAMPLE_DATA
 
 ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 
@@ -112,19 +112,19 @@ class KMeansCluster:
         converged = {}
         i = 0
         while i <= self.max_iter:
+            self.assign_cluster(data)
             for centroid in self.centroids:
                 old_centroid = self.centroids[centroid]
                 new_centroid = self.update_centroid().centroids[centroid]
                 converged[centroid] = self.meets_tolerance(old_centroid, new_centroid)
             if verbose > 1:
-                print(converged.values())
+                print(f'Iteration number: {i+1}')
             if all(converged.values()):
                 break
-            self.assign_cluster(data)
             i += 1
         if verbose > 0:
             print(f'Final clusters: {self.clusters.items()}')
-            print(f'Converged in {i} iterations.')
+            print(f'Converged in {i+1} iterations.')
         return self.clusters.items()
 
     def plot(self) -> None:
@@ -152,8 +152,8 @@ class KMeansCluster:
 
 def main():
     """Main function"""
-    kmeans = KMeansCluster()
-    kmeans.fit(TOY_DATA)
+    kmeans = KMeansCluster(k=3)
+    kmeans.fit(SAMPLE_DATA, verbose=2)
     print(list(kmeans.clusters.values()))
     kmeans.plot()
     kmeans.eval_metrics()

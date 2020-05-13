@@ -62,7 +62,7 @@ class KMedoidsCluster(KMeansCluster):
 
 def main():
     """Main function"""
-    kmedoids = KMedoidsCluster(k=3, method='manhattan')
+    kmedoids = KMedoidsCluster(k=3, method='euclidean', tol=0.00001)
     kmedoids.fit(SAMPLE_DATA, verbose=1)
     kmedoids.plot()
     kmedoids.eval_metrics()
