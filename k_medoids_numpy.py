@@ -16,8 +16,8 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from k_means.k_means_numpy import KMeans
-from k_means.make_clusters import SAMPLE_DATA
+from homework1.clusters import KMeans
+from make_clusters import SAMPLE_DATA
 
 
 class KMedoids(KMeans):

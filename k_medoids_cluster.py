@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
-from k_means.make_clusters import SAMPLE_DATA
+from make_clusters import SAMPLE_DATA
 from k_means_cluster import KMeansCluster
 
 ClusterData = Union[List, np.array, np.ndarray, DataFrame]

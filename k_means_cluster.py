@@ -18,7 +18,7 @@ import numpy as np
 from pandas import DataFrame
 from scipy.spatial.distance import cityblock
 
-from k_means.make_clusters import SAMPLE_DATA
+from make_clusters import SAMPLE_DATA
 
 ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 

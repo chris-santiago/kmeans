@@ -1,10 +1,10 @@
 """Main module"""
 import numpy as np
 
-from k_means.k_means_cluster import KMeansCluster
-from k_means.k_means_numpy import KMeans
-from k_means.k_medoids_cluster import KMedoidsCluster
-from k_means.make_clusters import SAMPLE_DATA
+from homework1.clusters import KMeansCluster
+from homework1.clusters import KMeans
+from k_medoids_cluster import KMedoidsCluster
+from make_clusters import SAMPLE_DATA
 
 
 def run_kmeans():

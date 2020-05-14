@@ -15,7 +15,7 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from k_means.make_clusters import SAMPLE_DATA
+from make_clusters import SAMPLE_DATA
 
 
 class KMeans:
@@ -137,7 +137,13 @@ class KMeans:
         """Function to detect convergence"""
         return np.linalg.norm(old_centroids - new_centroids) <= self.tol
 
-    def fit(self, data, verbose=True) -> "KMeans":
+    @staticmethod
+    def print_assignments(clusters, data):
+        """Print clusters and assigned points"""
+        for point in np.append(clusters.reshape(-1, 1), data, axis=1):
+            print(f'Cluster: {int(point[0])}, Point: {tuple(point[1:])}')
+
+    def fit(self, data, verbose=1) -> "KMeans":
         """
         Function to fit K-Means object to dataset.
         Randomly chooses initial centroids, assigns datapoints.
@@ -145,20 +151,24 @@ class KMeans:
         Continues until algorithm converges and WCSS is minimized.
 
         :param data: Numpy array of data
-        :param verbose: Boolean indicating verbosity of printouts
+        :param verbose: Integer indicating verbosity of printouts
         :return: self
         """
+        if verbose not in {0, 1, 2}:
+            raise ValueError('Verbose must be set to {0, 1, 2}')
         self.intialize_centroids(data)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster_vec(data)
             old_centroids, new_centroids = self.update_centroids(data)
+            if verbose > 1:
+                self.print_assignments(self.clusters, data)
             if self.meets_tolerance(old_centroids, new_centroids):
                 self.wcss = self.within_cluster(self.centroids, data)
                 self.assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
                 print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
                 break
-            if verbose:
+            if verbose > 0:
                 print(f'Iteration: {i}, WCSS: {self.within_cluster(self.centroids, data)}')
             i += 1
         return self
@@ -178,7 +188,7 @@ class KMeans:
 def main():
     """Main function"""
     kmeans = KMeans(k=3)
-    kmeans.fit(SAMPLE_DATA).plot()
+    kmeans.fit(SAMPLE_DATA, verbose=2).plot()
 
 
 if __name__ == '__main__':
