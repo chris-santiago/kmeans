@@ -16,27 +16,30 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from k_means.make_clusters import SAMPLE_DATA
 from k_means.k_means_numpy import KMeans
+from k_means.make_clusters import SAMPLE_DATA
 
 
 class KMedoids(KMeans):
-    def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300,
-                 method: str = 'euclidean'):
-        super().__init__(k, tol, max_iter, method)
+    """A vectorized K-Medoids Clustering Model using Numpy"""
 
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Function to update centroids (medoids) by computing a distance matrix for each point
+        and other points within a given cluster.  Use `np.argmin()` and sum of distance matrix
+        columns to find column-index with lowest WCSS.
+
+        Returns a tuple of old centroids and new centroids for convergence detection and
+        updates the `centroids` instance attribute.
+        """
         old_centroids = self.centroids.copy()
         for cluster in range(self.k):
             in_cluster = np.where(self.clusters == cluster)
-            distance_matrix = self.get_distance_vec(data[in_cluster], data[in_cluster]).sum(axis=0)
-            min_wcss = np.argmin(distance_matrix)
+            distance_matrix = self.get_distance_vec(data[in_cluster], data[in_cluster])
+            min_wcss = np.argmin(distance_matrix.sum(axis=0))
             self.centroids[cluster, :] = data[in_cluster][min_wcss]
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
-
-    # def within_cluster(self, centroids, data) -> float:
-    #     pass
 
     def plot(self) -> None:
         """Plot clusters and circles medoid in red"""
