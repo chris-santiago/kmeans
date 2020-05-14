@@ -13,6 +13,7 @@ Methodology for the K-Medoids algorithm:
 """
 from typing import Dict, List, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
@@ -58,6 +59,14 @@ class KMedoidsCluster(KMeansCluster):
                           if distance == min(mediod_distances.values())]
             self.centroids[cluster] = new_medoid[0]
         return self
+
+    def plot(self) -> None:
+        """Plot clusters and centroids"""
+        for cluster in self.clusters.values():
+            plt.scatter(np.array(cluster)[:, 0], np.array(cluster)[:, 1], alpha=0.5)
+        for point in self.centroids.values():
+            plt.scatter(point[0], point[1], marker='o', edgecolors='r', facecolors='none')
+        plt.show()
 
 
 def main():

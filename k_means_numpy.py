@@ -42,7 +42,7 @@ class KMeans:
         self.centroids = centroids[:self.k]
         return self
 
-    def get_distance(self, data: np.ndarray) -> np.ndarray:
+    def get_distance(self, centroids: np.ndarray, data: np.ndarray) -> np.ndarray:
         """
         Calculate a distance matrix, `S`, for two arrays so that  `s_ij` = d_ij` represents
         either the Euclidean or Manhattan distance from point `x_i` to centroid_j.
@@ -54,14 +54,14 @@ class KMeans:
         cluster columns.
         """
         choose_method = {'euclidean': 2, 'manhattan': 1}
-        dist = np.zeros((data.shape[0], self.centroids.shape[0]))
-        for centroid in range(self.centroids.shape[0]):
+        dist = np.zeros((data.shape[0], centroids.shape[0]))
+        for centroid in range(centroids.shape[0]):
             for point in range(data.shape[0]):
-                dist[point, centroid] = np.linalg.norm(data[point, :] - self.centroids[centroid, :],
+                dist[point, centroid] = np.linalg.norm(data[point, :] - centroids[centroid, :],
                                                        ord=choose_method[self.method])
         return dist
 
-    def get_distance_vec(self, data: np.ndarray) -> np.ndarray:
+    def get_distance_vec(self, centroids: np.ndarray, data: np.ndarray) -> np.ndarray:
         """
         Calculate a distance matrix, `S`, for two arrays so that  `s_ij` = d_ij` represents
         either the Euclidean or Manhattan distance from point `x_i` to centroid_j.
@@ -77,8 +77,8 @@ class KMeans:
         allowing for for mathematical operations that reduce the number of matrix dims.
         """
         if self.method == 'manhattan':
-            return np.abs(self.centroids - data[:, np.newaxis, :]).sum(axis=2)
-        return np.sqrt(((self.centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
+            return np.abs(centroids - data[:, np.newaxis, :]).sum(axis=2)
+        return np.sqrt(((centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
 
     def assign_cluster(self, data: np.ndarray) -> "KMeans":
         """
@@ -88,7 +88,7 @@ class KMeans:
         The `np.argmin()` function will select minimum distance across columns, assigning it to
         cluster=column-index.
         """
-        self.clusters = np.argmin(self.get_distance(data), axis=1)
+        self.clusters = np.argmin(self.get_distance(self.centroids, data), axis=1)
         return self
 
     def assign_cluster_vec(self, data: np.ndarray) -> "KMeans":
@@ -99,7 +99,7 @@ class KMeans:
         The `np.argmin()` function will select minimum distance across columns, assigning it to
         cluster=column-index.
         """
-        self.clusters = np.argmin(self.get_distance_vec(data), axis=1)
+        self.clusters = np.argmin(self.get_distance_vec(self.centroids, data), axis=1)
         return self
 
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -115,7 +115,7 @@ class KMeans:
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
-    def within_cluster(self, data):
+    def within_cluster(self, centroids: np.ndarray, data: np.ndarray) -> float:
         """
         Calculates within cluster sum of distances using a distance matrix as described in
         the `get_distance_vec()` method.
@@ -131,9 +131,9 @@ class KMeans:
 
         Then WCSS(S) == 0.2 + 0.1 + 0.2 == 0.5.
         """
-        return sum(np.amin(self.get_distance_vec(data), axis=1))
+        return sum(np.amin(self.get_distance_vec(centroids, data), axis=1))
 
-    def meets_tolerance(self, old_centroids, new_centroids):
+    def meets_tolerance(self, old_centroids: np.ndarray, new_centroids: np.ndarray) -> bool:
         """Function to detect convergence"""
         return np.linalg.norm(old_centroids - new_centroids) <= self.tol
 
@@ -154,12 +154,12 @@ class KMeans:
             self.assign_cluster_vec(data)
             old_centroids, new_centroids = self.update_centroids(data)
             if self.meets_tolerance(old_centroids, new_centroids):
-                self.wcss = self.within_cluster(data)
+                self.wcss = self.within_cluster(self.centroids, data)
                 self.assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
                 print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
                 break
             if verbose:
-                print(f'Iteration: {i}, WCSS: {self.within_cluster(data)}')
+                print(f'Iteration: {i}, WCSS: {self.within_cluster(self.centroids, data)}')
             i += 1
         return self
 
