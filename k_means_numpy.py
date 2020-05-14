@@ -36,14 +36,23 @@ class KMeans:
         self.wcss: float = 0.0
 
     def intialize_centroids(self, data: np.ndarray) -> "KMeans":
-        """Get initial centroids"""
+        """Get initial centroids by random shuffle."""
         centroids = data.copy()
         np.random.shuffle(data)
         self.centroids = centroids[:self.k]
         return self
 
     def get_distance(self, data: np.ndarray) -> np.ndarray:
-        """Calculate distance between two points"""
+        """
+        Calculate a distance matrix, `S`, for two arrays so that  `s_ij` = d_ij` represents
+        either the Euclidean or Manhattan distance from point `x_i` to centroid_j.
+
+        The result is a matrix with shape [n_obs, n_clusters].
+
+        This implementation first creates an empty matrix of shape [n_obs, n_clusters] and then
+        loops through each centroid and point, assigning the distance for each point to one of the
+        cluster columns.
+        """
         choose_method = {'euclidean': 2, 'manhattan': 1}
         dist = np.zeros((data.shape[0], self.centroids.shape[0]))
         for centroid in range(self.centroids.shape[0]):
@@ -53,23 +62,52 @@ class KMeans:
         return dist
 
     def get_distance_vec(self, data: np.ndarray) -> np.ndarray:
-        """Calculate distance between two arrays"""
+        """
+        Calculate a distance matrix, `S`, for two arrays so that  `s_ij` = d_ij` represents
+        either the Euclidean or Manhattan distance from point `x_i` to centroid_j.
+
+        The result is a matrix with shape [n_obs, n_clusters].
+
+        This implementation adds a new axis in the data array, allowing for Numpy broadcasting
+        with arrays of non-matching sizes.
+            (If the two arrays differ in their number of dimensions, the shape of the array with
+            fewer dimensions is padded with ones on its leading (left) side.)
+
+        This broadcasting trick keeps the first dimension as the point or cluster dimension,
+        allowing for for mathematical operations that reduce the number of matrix dims.
+        """
         if self.method == 'manhattan':
             return np.abs(self.centroids - data[:, np.newaxis, :]).sum(axis=2)
         return np.sqrt(((self.centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
 
     def assign_cluster(self, data: np.ndarray) -> "KMeans":
-        """Function to assign points to a centroid"""
+        """
+        Function to assign points to a centroid using a distance matrix as described in
+        the `get_distance()` method.  Updates the `centroids` instance attribute.
+
+        The `np.argmin()` function will select minimum distance across columns, assigning it to
+        cluster=column-index.
+        """
         self.clusters = np.argmin(self.get_distance(data), axis=1)
         return self
 
     def assign_cluster_vec(self, data: np.ndarray) -> "KMeans":
-        """Function to assign points to a centroid"""
+        """
+        Function to assign points to a centroid using a distance matrix as described in
+        the `get_distance_vec()` method.  Updates the `centroids` instance attribute.
+
+        The `np.argmin()` function will select minimum distance across columns, assigning it to
+        cluster=column-index.
+        """
         self.clusters = np.argmin(self.get_distance_vec(data), axis=1)
         return self
 
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Function to update centroids"""
+        """
+        Function to update centroids by computing the mean of each cluster.
+        Returns a tuple of old centroids and new centroids for convergence detection and
+        updates the `centroids` instance attribute.
+        """
         old_centroids = self.centroids.copy()
         for cluster in range(self.k):
             self.centroids[cluster, :] = np.mean(data[self.clusters == cluster],
@@ -78,7 +116,21 @@ class KMeans:
         return old_centroids, new_centroids
 
     def within_cluster(self, data):
-        """Calculates within cluster sum of distances"""
+        """
+        Calculates within cluster sum of distances using a distance matrix as described in
+        the `get_distance_vec()` method.
+
+        This implementation uses `np.amin()` to find the minimum value in each column (cluster)
+        and sum down the matrix.
+
+        For example, suppose S is defined as follows:
+
+            S = np.array([[0.3, 0.2],
+                          [0.1, 0.5],
+                          [0.4, 0.2]])
+
+        Then WCSS(S) == 0.2 + 0.1 + 0.2 == 0.5.
+        """
         return sum(np.amin(self.get_distance_vec(data), axis=1))
 
     def meets_tolerance(self, old_centroids, new_centroids):
