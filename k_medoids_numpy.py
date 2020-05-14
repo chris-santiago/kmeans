@@ -16,7 +16,7 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from homework1.clusters import KMeans
+from k_means_numpy import KMeans
 from make_clusters import SAMPLE_DATA
 
 

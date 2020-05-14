@@ -125,7 +125,7 @@ class KMeansCluster:
         if verbose > 0:
             print(f'Final clusters: {self.clusters.items()}')
             print(f'Converged in {i+1} iterations.')
-        return self.clusters.items()
+        return self
 
     def plot(self) -> None:
         """Plot clusters and centroids"""

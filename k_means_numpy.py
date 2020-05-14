@@ -38,7 +38,7 @@ class KMeans:
     def intialize_centroids(self, data: np.ndarray) -> "KMeans":
         """Get initial centroids by random shuffle."""
         centroids = data.copy()
-        np.random.shuffle(data)
+        np.random.shuffle(centroids)
         self.centroids = centroids[:self.k]
         return self
 
@@ -188,7 +188,7 @@ class KMeans:
 def main():
     """Main function"""
     kmeans = KMeans(k=3)
-    kmeans.fit(SAMPLE_DATA, verbose=2).plot()
+    kmeans.fit(SAMPLE_DATA, verbose=1).plot()
 
 
 if __name__ == '__main__':
