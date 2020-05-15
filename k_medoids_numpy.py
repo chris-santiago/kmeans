@@ -11,14 +11,18 @@ Methodology for the K-Medoids algorithm:
     the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
+import warnings
 from typing import Tuple, Optional
 
+import dask.array as da
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import mode
 
 from k_means_numpy import KMeans
 from make_clusters import SAMPLE_DATA
+
+warnings.filterwarnings('ignore', category=da.core.PerformanceWarning)
 
 
 class KMedoids(KMeans):
@@ -46,13 +50,78 @@ class KMedoids(KMeans):
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
+    def dask_assign_cluster(self, data: np.ndarray, chunk_size: int = 3000) -> "KMedoids":
+        """Modifies `assign_cluster_vec()` to use Dask arrays"""
+        dask_array = da.from_array(data, chunks=chunk_size)
+        self.clusters = np.argmin(self.get_distance_vec(self.centroids, dask_array), axis=1)
+        return self
+
+    def dask_update_centroids(self, data: np.ndarray,
+                              chunk_size: int = 3000) -> Tuple[np.ndarray, np.ndarray]:
+        """Modifies `update_centroids(_)` function to use Dask arrays"""
+        old_centroids = self.centroids.copy()
+        dask_array = da.from_array(data, chunks=chunk_size)
+        for cluster in range(self.k):
+            in_cluster = np.where(self.clusters == cluster)
+            distance_matrix = self.get_distance_vec(dask_array[in_cluster], dask_array[in_cluster])
+            min_wcss = np.argmin(distance_matrix.sum(axis=0))
+            self.centroids[cluster, :] = dask_array[in_cluster][min_wcss]
+        new_centroids = self.centroids.copy()
+        return old_centroids, new_centroids
+
     @staticmethod
     def _batch_data(data: np.ndarray, batch_size: int) -> np.ndarray:
+        """Method to batch data by random sampling"""
         indices = np.random.randint(data.shape[0], size=batch_size)
         return data[indices]
 
+    @staticmethod
+    def get_n_batches(data, batch_size):
+        """Determine a default number of batches"""
+        return int((data.shape[0] / batch_size) * 1.25)
+
+    def initialize_batches(self, n_batches: int, data: np.ndarray) -> None:
+        """Method to initialize array for batch runs"""
+        self.batch_runs = np.zeros((n_batches, self.k, data.shape[1]))
+
+    def set_final_centroids(self):
+        """Set final centroids using mode as measure of centrality"""
+        centroids_mode: mode = mode(self.batch_runs)
+        self.centroids = centroids_mode.mode
+
+    def fit(self, data: np.ndarray, verbose: int = 1) -> "KMeans":
+        """
+        ** Uses Dask Arrays **
+        Function to fit K-Means object to dataset.
+        Randomly chooses initial centroids, assigns datapoints.
+        Updates centroids and re-assigns datapoints.
+        Continues until algorithm converges and WCSS is minimized.
+
+        :param data: Numpy array of data
+        :param verbose: Integer indicating verbosity of printouts
+        :return: self
+        """
+        if verbose not in {0, 1, 2}:
+            raise ValueError('Verbose must be set to {0, 1, 2}')
+        self.intialize_centroids(data)
+        i = 1
+        while i <= self.max_iter:
+            self.assign_cluster_vec(data)
+            old_centroids, new_centroids = self.dask_update_centroids(data)
+            if verbose > 1:
+                self.print_assignments(self.clusters, data)
+            if self.meets_tolerance(old_centroids, new_centroids):
+                self.wcss = self.within_cluster(self.centroids, data)
+                self.assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
+                print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
+                break
+            if verbose > 0:
+                print(f'Iteration: {i}, WCSS: {self.within_cluster(self.centroids, data)}')
+            i += 1
+        return self
+
     def fit_batch(self, data: np.ndarray, verbose: int = 1,
-            n_batches: int = 10, batch_size: int = 6400) -> "KMeans":
+                  batch_size: int = 6400, n_batches: Optional[int] = None) -> "KMeans":
         """
         Function to fit K-Means object to dataset using mini-batches.
         Randomly chooses initial centroids, assigns datapoints.
@@ -67,8 +136,10 @@ class KMedoids(KMeans):
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
+        if n_batches is None:
+            n_batches = self.get_n_batches(data, batch_size)
         self.intialize_centroids(data)
-        self.batch_runs = np.zeros((n_batches, self.k, data.shape[1]))
+        self.initialize_batches(n_batches, data)
         for n in range(n_batches):
             batch_data = self._batch_data(data, batch_size)
             i = 1
@@ -83,10 +154,13 @@ class KMedoids(KMeans):
                     print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
                     break
                 if verbose > 0:
-                    print(f'Iteration: {i}, WCSS: {self.within_cluster(self.centroids, batch_data)}')
+                    print(f'Iteration: {i}, '
+                          f'WCSS: {self.within_cluster(self.centroids, batch_data)}')
                 i += 1
+            else:
+                raise RuntimeError('Failed to converge!')
             self.batch_runs[n, :, :] = self.centroids
-        self.centroids = mode(self.batch_runs).mode
+        self.set_final_centroids()
         return self
 
     def plot(self) -> None:
@@ -104,7 +178,8 @@ class KMedoids(KMeans):
 def main():
     """Main function"""
     kmedoids = KMedoids(k=3)
-    kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
+    kmedoids.fit(SAMPLE_DATA)
+    # kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
     print('Final medoids:')
     print(kmedoids.centroids)
     print('Batch results:')
