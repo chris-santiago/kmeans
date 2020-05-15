@@ -138,12 +138,12 @@ class KMeans:
         return np.linalg.norm(old_centroids - new_centroids) <= self.tol
 
     @staticmethod
-    def print_assignments(clusters, data):
+    def print_assignments(clusters: np.ndarray, data: np.ndarray):
         """Print clusters and assigned points"""
         for point in np.append(clusters.reshape(-1, 1), data, axis=1):
             print(f'Cluster: {int(point[0])}, Point: {tuple(point[1:])}')
 
-    def fit(self, data, verbose=1) -> "KMeans":
+    def fit(self, data: np.ndarray, verbose: int = 1) -> "KMeans":
         """
         Function to fit K-Means object to dataset.
         Randomly chooses initial centroids, assigns datapoints.

@@ -11,7 +11,7 @@ Methodology for the K-Medoids algorithm:
     the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
-from typing import Tuple
+from typing import Tuple, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +26,7 @@ class KMedoids(KMeans):
     def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300,
                  method: str = 'euclidean'):
         super().__init__(k, tol, max_iter, method)
-        self.batch_runs = None
+        self.batch_runs: Optional[np.ndarray] = None
 
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -46,11 +46,13 @@ class KMedoids(KMeans):
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
-    def _batch_data(self, data, batch_size):
+    @staticmethod
+    def _batch_data(data: np.ndarray, batch_size: int) -> np.ndarray:
         indices = np.random.randint(data.shape[0], size=batch_size)
         return data[indices]
 
-    def fit(self, data, verbose=1, n_batches=10, batch_size=6400) -> "KMeans":
+    def fit(self, data: np.ndarray, verbose: int = 1,
+            n_batches: int = 10, batch_size: int = 6400) -> "KMeans":
         """
         Function to fit K-Means object to dataset using mini-batches.
         Randomly chooses initial centroids, assigns datapoints.
@@ -59,6 +61,8 @@ class KMedoids(KMeans):
 
         :param data: Numpy array of data
         :param verbose: Integer indicating verbosity of printouts
+        :param batch_size:
+        :param n_batches:
         :return: self
         """
         if verbose not in {0, 1, 2}:
