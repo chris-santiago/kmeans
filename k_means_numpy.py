@@ -188,7 +188,7 @@ class KMeans:
 def main():
     """Main function"""
     kmeans = KMeans(k=3)
-    kmeans.fit(SAMPLE_DATA, verbose=1).plot()
+    kmeans.fit(SAMPLE_DATA, verbose=0).plot()
 
 
 if __name__ == '__main__':
