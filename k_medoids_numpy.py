@@ -51,7 +51,7 @@ class KMedoids(KMeans):
         indices = np.random.randint(data.shape[0], size=batch_size)
         return data[indices]
 
-    def fit(self, data: np.ndarray, verbose: int = 1,
+    def fit_batch(self, data: np.ndarray, verbose: int = 1,
             n_batches: int = 10, batch_size: int = 6400) -> "KMeans":
         """
         Function to fit K-Means object to dataset using mini-batches.
@@ -104,7 +104,7 @@ class KMedoids(KMeans):
 def main():
     """Main function"""
     kmedoids = KMedoids(k=3)
-    kmedoids.fit(SAMPLE_DATA, n_batches=15, batch_size=5000)
+    kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
     print('Final medoids:')
     print(kmedoids.centroids)
     print('Batch results:')
