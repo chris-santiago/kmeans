@@ -50,12 +50,6 @@ class KMedoids(KMeans):
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
-    def dask_assign_cluster(self, data: np.ndarray, chunk_size: int = 3000) -> "KMedoids":
-        """Modifies `assign_cluster_vec()` to use Dask arrays"""
-        dask_array = da.from_array(data, chunks=chunk_size)
-        self.clusters = np.argmin(self.get_distance_vec(self.centroids, dask_array), axis=1)
-        return self
-
     def dask_update_centroids(self, data: np.ndarray,
                               chunk_size: int = 3000) -> Tuple[np.ndarray, np.ndarray]:
         """Modifies `update_centroids(_)` function to use Dask arrays"""
@@ -85,9 +79,15 @@ class KMedoids(KMeans):
         self.batch_runs = np.zeros((n_batches, self.k, data.shape[1]))
 
     def set_final_centroids(self):
-        """Set final centroids using mode as measure of centrality"""
-        centroids_mode: mode = mode(self.batch_runs)
-        self.centroids = centroids_mode.mode
+        """Set final centroids for batch runs using mode as measure of centrality"""
+        # subscript mode with [0] to return 2D matrix
+        setattr(self, 'centroids', mode(self.batch_runs).mode[0])
+
+    def set_final_assignments(self, data):
+        """Set final cluster assignments for batch runs using final centroids"""
+        self.assign_cluster_vec(data)
+        assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
+        setattr(self, 'assignments', assignments)
 
     def fit(self, data: np.ndarray, verbose: int = 1) -> "KMeans":
         """
@@ -161,6 +161,7 @@ class KMedoids(KMeans):
                 raise RuntimeError('Failed to converge!')
             self.batch_runs[n, :, :] = self.centroids
         self.set_final_centroids()
+        self.set_final_assignments(data)
         return self
 
     def plot(self) -> None:
@@ -171,19 +172,29 @@ class KMedoids(KMeans):
                         self.assignments[cluster_filter, 2],
                         alpha=0.5)
         for point in self.centroids:
-            plt.scatter(point[0], point[1], marker='o', edgecolors='r', facecolors='none')
+            plt.scatter(point[0], point[1], marker='o', edgecolors='black', facecolors='none')
         plt.show()
+
+    # def plot_batch(self) -> None:
+    #     """Plot clusters and circles medoid in red"""
+    #     for cluster in range(self.k):
+    #         cluster_filter = self.assignments[:, 0] == cluster
+    #         plt.scatter(self.assignments[cluster_filter, 1],
+    #                     self.assignments[cluster_filter, 2],
+    #                     alpha=0.5)
+    #     for point in self.centroids:
+    #         plt.scatter(point[0], point[1], marker='o', edgecolors='black', facecolors='none')
+    #     plt.show()
 
 
 def main():
     """Main function"""
-    kmedoids = KMedoids(k=3)
-    kmedoids.fit(SAMPLE_DATA)
+    kmedoids = KMedoids(k=5)
+    kmedoids.fit_batch(SAMPLE_DATA)
     # kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
     print('Final medoids:')
     print(kmedoids.centroids)
-    print('Batch results:')
-    print(kmedoids.batch_runs)
+    kmedoids.plot()
 
 
 if __name__ == '__main__':
