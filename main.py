@@ -1,36 +1,43 @@
-"""Main module"""
+"""Main module for GATech grading purposes"""
+from typing import Tuple
+
 import numpy as np
 
-from homework1.clusters import KMeansCluster
-from homework1.clusters import KMeans
-from k_medoids_cluster import KMedoidsCluster
+from k_means_numpy import KMeans
+from k_medoids_numpy import KMedoids
+from image import scale_image, rescale_image
 from make_clusters import SAMPLE_DATA
 
 
-def run_kmeans():
-    """Implement K-Means using generated data"""
-    kmeans = KMeansCluster(k=3, max_iter=100, method='manhattan')
-    kmeans.fit(SAMPLE_DATA, verbose=1)
-    kmeans.plot()
+def test_kmeans(pixels: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convenience wrapper for GATech grading.
+
+    :param pixels: A numpy array of image data
+    :param k: Number of clusters to use
+    :return: A tuple of classes and centroids
+    """
+    scaled_data = scale_image(pixels)
+    kmeans = KMeans(k=k)
+    kmeans.fit(scaled_data, verbose=0)
+    return kmeans.clusters, rescale_image(kmeans.centroids)
 
 
-def run_kmediods():
-    kmeans = KMedoidsCluster(k=3, max_iter=100, method='euclidean')
-    kmeans.fit(SAMPLE_DATA, verbose=2)
-    kmeans.plot()
+def test_kmedoids(pixels: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convenience wrapper for GATech grading.
 
-
-def from_text(file):
-    points = []
-    file = 's2.txt'
-    with open(file, 'r') as text_file:
-        for line in text_file.readlines():
-            points.append(tuple(line.strip().split('    ')))
-    points = np.array([(int(a), int(b)) for a, b in points])
-    kmeans = KMeans(k=15)
-    kmeans.fit(points, verbose=False)
-    kmeans.plot()
+    :param pixels: A numpy array of image data
+    :param k: Number of clusters to use
+    :return: A tuple of classes and centroids
+    """
+    scaled_data = scale_image(pixels)
+    kmedoids = KMedoids(k=k)
+    kmedoids.fit(scaled_data, verbose=0)
+    return kmedoids.clusters, rescale_image(kmedoids.centroids)
 
 
 if __name__ == '__main__':
-    from_text('s2.txt')
+    classes, centroids = test_kmedoids(SAMPLE_DATA, 5)
+    print(classes)
+    print(centroids)

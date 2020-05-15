@@ -89,7 +89,7 @@ class KMedoids(KMeans):
         assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
         setattr(self, 'assignments', assignments)
 
-    def fit(self, data: np.ndarray, verbose: int = 1) -> "KMeans":
+    def fit(self, data: np.ndarray, verbose: int = 1) -> "KMedoids":
         """
         ** Uses Dask Arrays **
         Function to fit K-Means object to dataset.
@@ -140,6 +140,7 @@ class KMedoids(KMeans):
             n_batches = self.get_n_batches(data, batch_size)
         self.intialize_centroids(data)
         self.initialize_batches(n_batches, data)
+        print(f'Running {n_batches} batches of size {batch_size}...')
         for n in range(n_batches):
             batch_data = self._batch_data(data, batch_size)
             i = 1
@@ -173,18 +174,8 @@ class KMedoids(KMeans):
                         alpha=0.5)
         for point in self.centroids:
             plt.scatter(point[0], point[1], marker='o', edgecolors='black', facecolors='none')
+        plt.title(f'Clustering for {self.k} Medoids (scaled)')
         plt.show()
-
-    # def plot_batch(self) -> None:
-    #     """Plot clusters and circles medoid in red"""
-    #     for cluster in range(self.k):
-    #         cluster_filter = self.assignments[:, 0] == cluster
-    #         plt.scatter(self.assignments[cluster_filter, 1],
-    #                     self.assignments[cluster_filter, 2],
-    #                     alpha=0.5)
-    #     for point in self.centroids:
-    #         plt.scatter(point[0], point[1], marker='o', edgecolors='black', facecolors='none')
-    #     plt.show()
 
 
 def main():
