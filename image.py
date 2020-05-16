@@ -2,6 +2,7 @@
 from typing import Tuple, Optional
 
 from PIL import Image
+import matplotlib.pyplot as plt
 import numpy as np
 
 from k_means_numpy import KMeans
@@ -81,11 +82,16 @@ class ImageConverter:
         img = Image.fromarray(self.compressed.astype('uint8'), 'RGB')
         img.show()
 
+    def print(self) -> None:
+        """Print compressed image"""
+        img = self.compressed.astype('uint8')
+        plt.imshow(img)
+
 
 def main():
     """Main function"""
     dog = ImageConverter('../data/dog.jpg')
-    kmeans = KMeans(k=6)
+    kmeans = KMeans(k=24)
     kmeans.fit(dog.scale_reshape(), verbose=0)
     dog.rescale_reshape(compress_image(kmeans.centroids, kmeans.clusters)).show()
 

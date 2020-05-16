@@ -32,6 +32,26 @@ class KMedoids(KMeans):
         super().__init__(k, tol, max_iter, method)
         self.batch_runs: Optional[np.ndarray] = None
 
+    def soft_initialization(self, data: np.ndarray, sample_size: int = 3000) -> "KMedoids":
+        """
+        Initialize medoids using a random sample of points.
+        Runs an initial k-mediods iteration on a random subset of data.
+        """
+        subset_idx = np.random.randint(data.shape[0], size=sample_size)
+        subset = data[subset_idx]
+        centroid_idx = np.random.randint(subset.shape[0], size=self.k)
+        self.centroids = subset.copy()[centroid_idx]
+        i = 1
+        while i <= self.max_iter:
+            self.assign_cluster_vec(subset)
+            old_centroids, new_centroids = self.dask_update_centroids(subset)
+            if self.meets_tolerance(old_centroids, new_centroids):
+                self.wcss = self.within_cluster(self.centroids, subset)
+                self.assignments = np.append(self.clusters.reshape(-1, 1), subset, axis=1)
+                break
+            i += 1
+        return self
+
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Function to update centroids (medoids) by computing a distance matrix for each point
@@ -103,7 +123,8 @@ class KMedoids(KMeans):
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        self.intialize_centroids(data)
+        # self.intialize_centroids(data)
+        self.soft_initialization(data)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster_vec(data)
@@ -181,7 +202,7 @@ class KMedoids(KMeans):
 def main():
     """Main function"""
     kmedoids = KMedoids(k=5)
-    kmedoids.fit_batch(SAMPLE_DATA)
+    kmedoids.fit(SAMPLE_DATA)
     # kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
     print('Final medoids:')
     print(kmedoids.centroids)
