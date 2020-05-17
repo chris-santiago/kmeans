@@ -12,7 +12,7 @@ Methodology for the K-Medoids algorithm:
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
 import warnings
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 
 import dask.array as da
 import matplotlib.pyplot as plt
@@ -21,6 +21,9 @@ from scipy.stats import mode
 
 from k_means_numpy import KMeans
 from make_clusters import SAMPLE_DATA
+
+from sklearn.metrics import pairwise_distances
+import scipy.spatial.distance
 
 warnings.filterwarnings('ignore', category=da.core.PerformanceWarning)
 
@@ -44,7 +47,7 @@ class KMedoids(KMeans):
         i = 1
         while i <= self.max_iter:
             self.assign_cluster_vec(subset)
-            old_centroids, new_centroids = self.dask_update_centroids(subset)
+            old_centroids, new_centroids = self.update_centroids(subset)
             if self.meets_tolerance(old_centroids, new_centroids):
                 self.wcss = self.within_cluster(self.centroids, subset)
                 self.assignments = np.append(self.clusters.reshape(-1, 1), subset, axis=1)
@@ -64,7 +67,11 @@ class KMedoids(KMeans):
         old_centroids = self.centroids.copy()
         for cluster in range(self.k):
             in_cluster = np.where(self.clusters == cluster)
-            distance_matrix = self.get_distance_vec(data[in_cluster], data[in_cluster])
+            # assuming sklearn/scipy distance calcs are optimized...
+            # distance_matrix = self.get_distance_vec(data[in_cluster], data[in_cluster])
+            # distance_matrix = pairwise_distances(data[in_cluster], n_jobs=4)
+            distance_matrix = scipy.spatial.distance.pdist(data[in_cluster],
+                                                           self.distance_mapper[self.method])
             min_wcss = np.argmin(distance_matrix.sum(axis=0))
             self.centroids[cluster, :] = data[in_cluster][min_wcss]
         new_centroids = self.centroids.copy()
@@ -77,7 +84,11 @@ class KMedoids(KMeans):
         dask_array = da.from_array(data, chunks=chunk_size)
         for cluster in range(self.k):
             in_cluster = np.where(self.clusters == cluster)
-            distance_matrix = self.get_distance_vec(dask_array[in_cluster], dask_array[in_cluster])
+            # assuming sklearn/scipy distance calcs are optimized...
+            # distance_matrix = self.get_distance_vec(dask_array[in_cluster], dask_array[in_cluster])
+            # distance_matrix = pairwise_distances(dask_array[in_cluster])
+            distance_matrix = scipy.spatial.distance.pdist(dask_array[in_cluster],
+                                                           self.distance_mapper[self.method])
             min_wcss = np.argmin(distance_matrix.sum(axis=0))
             self.centroids[cluster, :] = dask_array[in_cluster][min_wcss]
         new_centroids = self.centroids.copy()
@@ -109,7 +120,7 @@ class KMedoids(KMeans):
         assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
         setattr(self, 'assignments', assignments)
 
-    def fit(self, data: np.ndarray, verbose: int = 1) -> "KMedoids":
+    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = True) -> "KMedoids":
         """
         ** Uses Dask Arrays **
         Function to fit K-Means object to dataset.
@@ -119,6 +130,7 @@ class KMedoids(KMeans):
 
         :param data: Numpy array of data
         :param verbose: Integer indicating verbosity of printouts
+        :param use_dask: Boolean to use Dask arrays for pairwise distance calcs
         :return: self
         """
         if verbose not in {0, 1, 2}:
@@ -128,7 +140,10 @@ class KMedoids(KMeans):
         i = 1
         while i <= self.max_iter:
             self.assign_cluster_vec(data)
-            old_centroids, new_centroids = self.dask_update_centroids(data)
+            if use_dask:
+                old_centroids, new_centroids = self.dask_update_centroids(data)
+            else:
+                old_centroids, new_centroids = self.update_centroids(data)
             if verbose > 1:
                 self.print_assignments(self.clusters, data)
             if self.meets_tolerance(old_centroids, new_centroids):
@@ -201,11 +216,15 @@ class KMedoids(KMeans):
 
 def main():
     """Main function"""
-    kmedoids = KMedoids(k=5)
-    kmedoids.fit(SAMPLE_DATA)
+    import time
+    start = time.time()
+    kmedoids = KMedoids(k=5, method='manhattan')
+    kmedoids.fit(SAMPLE_DATA, use_dask=True)
     # kmedoids.fit_batch(SAMPLE_DATA, n_batches=15, batch_size=5000)
     print('Final medoids:')
     print(kmedoids.centroids)
+    end = time.time()
+    print(f'Time: {end - start}')
     kmedoids.plot()
 
 

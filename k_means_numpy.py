@@ -10,10 +10,11 @@ Methodology for the K Means algorithm:
     Take mean of each class (mean of all featuresets by class), making that mean the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
-from typing import Tuple
+from typing import Tuple, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.spatial.distance
 
 from make_clusters import SAMPLE_DATA
 
@@ -34,6 +35,11 @@ class KMeans:
         self.clusters: np.ndarray = np.array(0)
         self.assignments: np.ndarray = np.array(0)
         self.wcss: float = 0.0
+
+        self.distance_mapper: Dict[str, str] = {
+            'euclidean': 'euclidean',
+            'manhattan': 'cityblock'
+        }
 
     def intialize_centroids(self, data: np.ndarray) -> "KMeans":
         """Get initial centroids by random shuffle."""
@@ -78,9 +84,10 @@ class KMeans:
         This broadcasting trick keeps the first dimension as the point or cluster dimension,
         allowing for for mathematical operations that reduce the number of matrix dims.
         """
-        if self.method == 'manhattan':
-            return np.abs(centroids - data[:, np.newaxis, :]).sum(axis=2)
-        return np.sqrt(((centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
+        # if self.method == 'manhattan':
+        #     return np.abs(centroids - data[:, np.newaxis, :]).sum(axis=2)
+        # return np.sqrt(((centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
+        return scipy.spatial.distance.cdist(data, centroids, self.distance_mapper[self.method])
 
     def assign_cluster(self, data: np.ndarray) -> "KMeans":
         """
