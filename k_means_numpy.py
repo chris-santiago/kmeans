@@ -24,8 +24,8 @@ class KMeans:
 
     def __init__(self, k: int = 2, tol: float = 0.001, max_iter: int = 300,
                  method: str = 'euclidean'):
-        if method not in {'euclidean', 'manhattan'}:
-            raise ValueError('Method must be one of "euclidean" or "manhattan"')
+        if method not in {'euclidean', 'cityblock'}:
+            raise ValueError('Method must be one of "euclidean" or "cityblock"')
         self.k = k
         self.tol = tol
         self.max_iter = max_iter
@@ -35,11 +35,6 @@ class KMeans:
         self.clusters: np.ndarray = np.array(0)
         self.assignments: np.ndarray = np.array(0)
         self.wcss: float = 0.0
-
-        self.distance_mapper: Dict[str, str] = {
-            'euclidean': 'euclidean',
-            'manhattan': 'cityblock'
-        }
 
     def intialize_centroids(self, data: np.ndarray) -> "KMeans":
         """Get initial centroids by random shuffle."""
@@ -57,37 +52,9 @@ class KMeans:
 
         The result is a matrix with shape [n_obs, n_clusters].
 
-        This implementation first creates an empty matrix of shape [n_obs, n_clusters] and then
-        loops through each centroid and point, assigning the distance for each point to one of the
-        cluster columns.
+        This implementation uses Scipy's `cdist()` function.
         """
-        choose_method = {'euclidean': 2, 'manhattan': 1}
-        dist = np.zeros((data.shape[0], centroids.shape[0]))
-        for centroid in range(centroids.shape[0]):
-            for point in range(data.shape[0]):
-                dist[point, centroid] = np.linalg.norm(data[point, :] - centroids[centroid, :],
-                                                       ord=choose_method[self.method])
-        return dist
-
-    def get_distance_vec(self, centroids: np.ndarray, data: np.ndarray) -> np.ndarray:
-        """
-        Calculate a distance matrix, `S`, for two arrays so that  `s_ij` = d_ij` represents
-        either the Euclidean or Manhattan distance from point `x_i` to centroid_j.
-
-        The result is a matrix with shape [n_obs, n_clusters].
-
-        This implementation adds a new axis in the data array, allowing for Numpy broadcasting
-        with arrays of non-matching sizes.
-            (If the two arrays differ in their number of dimensions, the shape of the array with
-            fewer dimensions is padded with ones on its leading (left) side.)
-
-        This broadcasting trick keeps the first dimension as the point or cluster dimension,
-        allowing for for mathematical operations that reduce the number of matrix dims.
-        """
-        # if self.method == 'manhattan':
-        #     return np.abs(centroids - data[:, np.newaxis, :]).sum(axis=2)
-        # return np.sqrt(((centroids - data[:, np.newaxis, :]) ** 2).sum(axis=2))
-        return scipy.spatial.distance.cdist(data, centroids, self.distance_mapper[self.method])
+        return scipy.spatial.distance.cdist(data, centroids, self.method)
 
     def assign_cluster(self, data: np.ndarray) -> "KMeans":
         """
@@ -98,17 +65,6 @@ class KMeans:
         cluster=column-index.
         """
         self.clusters = np.argmin(self.get_distance(self.centroids, data), axis=1)
-        return self
-
-    def assign_cluster_vec(self, data: np.ndarray) -> "KMeans":
-        """
-        Function to assign points to a centroid using a distance matrix as described in
-        the `get_distance_vec()` method.  Updates the `centroids` instance attribute.
-
-        The `np.argmin()` function will select minimum distance across columns, assigning it to
-        cluster=column-index.
-        """
-        self.clusters = np.argmin(self.get_distance_vec(self.centroids, data), axis=1)
         return self
 
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -140,7 +96,7 @@ class KMeans:
 
         Then WCSS(S) == 0.2 + 0.1 + 0.2 == 0.5.
         """
-        return sum(np.amin(self.get_distance_vec(centroids, data), axis=1))
+        return sum(np.amin(self.get_distance(centroids, data), axis=1))
 
     def meets_tolerance(self, old_centroids: np.ndarray, new_centroids: np.ndarray) -> bool:
         """Function to detect convergence"""
@@ -168,7 +124,7 @@ class KMeans:
         self.intialize_centroids(data)
         i = 1
         while i <= self.max_iter:
-            self.assign_cluster_vec(data)
+            self.assign_cluster(data)
             old_centroids, new_centroids = self.update_centroids(data)
             if verbose > 1:
                 self.print_assignments(self.clusters, data)
@@ -197,7 +153,7 @@ class KMeans:
 
 def main():
     """Main function"""
-    kmeans = KMeans(k=3)
+    kmeans = KMeans(k=3, method='cityblock')
     kmeans.fit(SAMPLE_DATA, verbose=0).plot()
 
 
