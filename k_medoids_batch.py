@@ -11,19 +11,16 @@ Methodology for the K-Medoids algorithm:
     the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
+import time
 import warnings
-from typing import Tuple, Optional, Dict
+from typing import Optional
 
 import dask.array as da
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import mode
 
 from k_medoids_numpy import KMedoids
 from make_clusters import SAMPLE_DATA
-
-from sklearn.metrics import pairwise_distances
-import scipy.spatial.distance
 
 warnings.filterwarnings('ignore', category=da.core.PerformanceWarning)
 
@@ -101,7 +98,7 @@ class BatchKMedoids(KMedoids):
             raise ValueError('Verbose must be set to {0, 1, 2}')
         if n_batches is None:
             n_batches = self.get_n_batches(data, batch_size)
-        self.intialize_centroids(data)
+        self.initialize_centroids(data)
         self.initialize_batches(n_batches, data)
         print(f'Running {n_batches} batches of size {batch_size}...')
         for n in range(n_batches):
@@ -132,7 +129,6 @@ class BatchKMedoids(KMedoids):
 
 def main():
     """Main function"""
-    import time
     start = time.time()
     kmedoids = BatchKMedoids(k=5)
     kmedoids.fit(SAMPLE_DATA, verbose=0)

@@ -1,13 +1,14 @@
 """Module for processing small RGB images"""
-from typing import Tuple, Optional
+import time
+from typing import Optional, Tuple
 
-from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
 from k_means_numpy import KMeans
-from k_medoids_numpy import KMedoids
 from k_medoids_batch import BatchKMedoids
+from k_medoids_numpy import KMedoids
 
 
 def image_to_array(file):
@@ -100,11 +101,10 @@ def main():
     KMedoids w/soft initialization time: ~ 5s
     BatchKMedoids time: ~ 2s
     """
-    import time
     start = time.time()
     dog = ImageConverter('../data/dog.jpg')
     algo = KMedoids(k=16)
-    algo.fit(dog.scale_reshape(), verbose=1, use_dask=False)
+    algo.fit(dog.scale_reshape(), verbose=1)
     end = time.time()
     print(f'Time: {end - start}')
     dog.rescale_reshape(compress_image(algo.centroids, algo.clusters)).show()

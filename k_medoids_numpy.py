@@ -11,17 +11,17 @@ Methodology for the K-Medoids algorithm:
     the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
+import time
 import warnings
-from typing import Tuple, Optional, Dict
+from typing import Optional, Tuple
 
 import dask.array as da
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial.distance import pdist, squareform
 
 from k_means_numpy import KMeans
 from make_clusters import SAMPLE_DATA
-
-from scipy.spatial.distance import pdist, squareform
 
 warnings.filterwarnings('ignore', category=da.core.PerformanceWarning)
 
@@ -158,7 +158,7 @@ class KMedoids(KMeans):
         """Method to choose initialization function"""
         methods = {
             True: self.soft_initialization,
-            False: self.intialize_centroids,
+            False: self.initialize_centroids,
         }
         if initial_points is None:
             return methods[soft_initialize](data)
@@ -167,14 +167,14 @@ class KMedoids(KMeans):
     def _choose_update_method(self, choice: str, data: np.ndarray) -> callable:
         """Method to choose centroid update function"""
         methods = {
-            None: self.update_centroids,
+            'brute': self.update_centroids,
             'batch': self.batch_update_centroids,
             'knn': self.nn_update_centroids,
             'dask': self.batch_update_centroids
         }
         return methods[choice](data)
 
-    def fit(self, data: np.ndarray, verbose: int = 1, update_method: Optional[str] = None,
+    def fit(self, data: np.ndarray, verbose: int = 1, update_method: str = 'knn',
             soft_initialize: bool = True, initial_points: np.ndarray = None) -> "KMedoids":
         """
         ** Uses Dask Arrays **
@@ -193,7 +193,7 @@ class KMedoids(KMeans):
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        if update_method not in {None, 'batch', 'knn', 'dask'}:
+        if update_method not in {'brute', 'batch', 'knn', 'dask'}:
             raise ValueError("Accepted update methods: {None, 'batch', 'knn', 'dask'}")
         self._choose_initialization(soft_initialize, data, initial_points)
         i = 1
@@ -228,10 +228,9 @@ class KMedoids(KMeans):
 
 def main():
     """Main function"""
-    import time
     start = time.time()
     kmedoids = KMedoids(k=5, method='euclidean')
-    kmedoids.fit(SAMPLE_DATA, update_method='knn')
+    kmedoids.fit(SAMPLE_DATA)
     print('Final medoids:')
     print(kmedoids.centroids)
     end = time.time()

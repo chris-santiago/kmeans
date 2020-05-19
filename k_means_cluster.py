@@ -136,6 +136,7 @@ class KMeansCluster:
         plt.show()
 
     def get_cluster_ssd(self) -> Dict[int, Any]:
+        """Get within cluster sums of squared distances"""
         cluster_distances: Dict[int, Any] = {}
         for cluster in self.centroids:
             centroid_dist = 0
@@ -145,6 +146,7 @@ class KMeansCluster:
         return cluster_distances
 
     def eval_metrics(self) -> Dict[str, Union[Dict[int, float], Dict[str, float]]]:
+        """Get cluster evaluation metrics"""
         clusters: Dict[int, float] = self.get_cluster_ssd()
         total_ssd: float = sum(clusters.values())
         return {'cluster_dist': clusters, 'total_dist': total_ssd}

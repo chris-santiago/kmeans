@@ -10,7 +10,7 @@ Methodology for the K Means algorithm:
     Take mean of each class (mean of all featuresets by class), making that mean the new centroid
     Repeat steps 3-5 until optimized (centroids no longer moving)
 """
-from typing import Tuple, Dict
+from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,7 +36,7 @@ class KMeans:
         self.assignments: np.ndarray = np.array(0)
         self.wcss: float = 0.0
 
-    def intialize_centroids(self, data: np.ndarray) -> "KMeans":
+    def initialize_centroids(self, data: np.ndarray) -> "KMeans":
         """Get initial centroids by random choice."""
         centroids = data.copy()
         indices = np.random.randint(data.shape[0], size=self.k)
@@ -121,7 +121,7 @@ class KMeans:
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        self.intialize_centroids(data)
+        self.initialize_centroids(data)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster(data)

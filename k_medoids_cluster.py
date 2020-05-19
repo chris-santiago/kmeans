@@ -17,14 +17,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
-from make_clusters import SAMPLE_DATA
 from k_means_cluster import KMeansCluster
+from make_clusters import SAMPLE_DATA
 
 ClusterData = Union[List, np.array, np.ndarray, DataFrame]
 ClusterPoint = Tuple[Union[int, float], ...]
 
 
 class KMedoidsCluster(KMeansCluster):
+    """Simple KMedoids class"""
     def __init__(self, k: int = 2, tol: float = 0.0001, max_iter: int = 300,
                  method: str = 'euclidean'):
         super().__init__(k, tol, max_iter, method)

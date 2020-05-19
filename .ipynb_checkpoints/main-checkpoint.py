@@ -3,9 +3,9 @@ from typing import Tuple
 
 import numpy as np
 
+from image import rescale_image, scale_image
 from k_means_numpy import KMeans
 from k_medoids_numpy import KMedoids
-from image import scale_image, rescale_image
 from make_clusters import SAMPLE_DATA
 
 

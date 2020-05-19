@@ -1,11 +1,12 @@
 import os
+from os.path import abspath, exists
+
 import numpy as np
 import pandas as pd
 import scipy.linalg
-from os.path import abspath, exists
+from matplotlib import pyplot as plt
 from scipy import sparse
 from sklearn.cluster import KMeans
-from matplotlib import pyplot as plt
 
 
 def graph_from_file(filename: str) -> np.ndarray:
