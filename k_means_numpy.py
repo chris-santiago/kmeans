@@ -37,11 +37,9 @@ class KMeans:
         self.wcss: float = 0.0
 
     def intialize_centroids(self, data: np.ndarray) -> "KMeans":
-        """Get initial centroids by random shuffle."""
+        """Get initial centroids by random choice."""
         centroids = data.copy()
         indices = np.random.randint(data.shape[0], size=self.k)
-        # np.random.shuffle(centroids)
-        # self.centroids = centroids[:self.k]
         self.centroids = centroids[indices]
         return self
 

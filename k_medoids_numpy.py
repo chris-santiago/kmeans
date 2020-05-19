@@ -53,6 +53,11 @@ class KMedoids(KMeans):
             i += 1
         return self
 
+    def manual_initialization(self, points: np.ndarray) -> "KMedoids":
+        """Method to allow manually set centroids"""
+        self.centroids = points
+        return self
+
     def update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Function to update centroids (medoids) by computing a distance matrix for each point
@@ -147,8 +152,8 @@ class KMedoids(KMeans):
             if _is_in is False:
                 raise ValueError('Medoid cannot be assigned to non-existent point.')
 
-    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = True,
-            soft_initialize: bool = True) -> "KMedoids":
+    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = False,
+            soft_initialize: bool = True, initial_points: np.ndarray = None) -> "KMedoids":
         """
         ** Uses Dask Arrays **
         Function to fit K-Means object to dataset.
@@ -164,10 +169,13 @@ class KMedoids(KMeans):
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        if soft_initialize:
-            self.soft_initialization(data)
+        if initial_points is None:
+            if soft_initialize:
+                self.soft_initialization(data)
+            else:
+                self.intialize_centroids(data)
         else:
-            self.intialize_centroids(data)
+            self.manual_initialization(initial_points)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster(data)
@@ -206,7 +214,7 @@ def main():
     import time
     start = time.time()
     kmedoids = KMedoids(k=5, method='euclidean')
-    kmedoids.fit(SAMPLE_DATA, use_dask=False)
+    kmedoids.fit(SAMPLE_DATA, use_dask=False, initial_points=SAMPLE_DATA[:5, :])
     print('Final medoids:')
     print(kmedoids.centroids)
     end = time.time()
