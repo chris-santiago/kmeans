@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from k_means_numpy import KMeans
+from k_medoids_numpy import KMedoids
+from k_medoids_batch import BatchKMedoids
 
 
 def image_to_array(file):
@@ -89,11 +91,23 @@ class ImageConverter:
 
 
 def main():
-    """Main function"""
+    """
+    Main function
+
+    ** Using dog image **
+    KMeans time: ~ 5s
+    KMedoids time: ~13s
+    KMedoids w/soft initialization time: ~ 5s
+    BatchKMedoids time: ~ 2s
+    """
+    import time
+    start = time.time()
     dog = ImageConverter('../data/dog.jpg')
-    kmeans = KMeans(k=24)
-    kmeans.fit(dog.scale_reshape(), verbose=0)
-    dog.rescale_reshape(compress_image(kmeans.centroids, kmeans.clusters)).show()
+    algo = KMedoids(k=16)
+    algo.fit(dog.scale_reshape(), verbose=1, use_dask=False)
+    end = time.time()
+    print(f'Time: {end - start}')
+    dog.rescale_reshape(compress_image(algo.centroids, algo.clusters)).show()
 
 
 if __name__ == '__main__':

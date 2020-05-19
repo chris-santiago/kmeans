@@ -54,6 +54,8 @@ class KMeans:
 
         This implementation uses Scipy's `cdist()` function.
         """
+        if np.ndim(centroids) == 1:
+            centroids = centroids[np.newaxis]
         return scipy.spatial.distance.cdist(data, centroids, self.method)
 
     def assign_cluster(self, data: np.ndarray) -> "KMeans":

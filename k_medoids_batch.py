@@ -66,7 +66,7 @@ class BatchKMedoids(KMedoids):
     @staticmethod
     def get_n_batches(data, batch_size):
         """Determine a default number of batches"""
-        return int((data.shape[0] / batch_size) * 1.25)
+        return int((data.shape[0] / batch_size) * 1.5)
 
     def initialize_batches(self, n_batches: int, data: np.ndarray) -> None:
         """Method to initialize array for batch runs"""
@@ -126,6 +126,7 @@ class BatchKMedoids(KMedoids):
             self.batch_runs[n, :, :] = self.centroids
         self.set_final_centroids()
         self.set_final_assignments(data)
+        self.check_final_centroids(data)
         return self
 
 

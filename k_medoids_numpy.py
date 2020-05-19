@@ -17,12 +17,11 @@ from typing import Tuple, Optional, Dict
 import dask.array as da
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import mode
 
 from k_means_numpy import KMeans
 from make_clusters import SAMPLE_DATA
 
-import scipy.spatial.distance
+from scipy.spatial.distance import pdist, squareform
 
 warnings.filterwarnings('ignore', category=da.core.PerformanceWarning)
 
@@ -68,54 +67,88 @@ class KMedoids(KMeans):
             in_cluster = np.where(self.clusters == cluster)
             # assuming scipy distance calcs are optimized...
             # distance_matrix = self.get_distance_vec(data[in_cluster], data[in_cluster])
-            distance_matrix = scipy.spatial.distance.pdist(data[in_cluster], self.method)
+            distance_matrix = squareform(pdist(data[in_cluster], self.method))
             min_wcss = np.argmin(distance_matrix.sum(axis=0))
             self.centroids[cluster, :] = data[in_cluster][min_wcss]
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
+    def find_nearest_neighbors(self, centroid: np.ndarray, cluster_points: np.ndarray,
+                               n_neighbors: int) -> np.ndarray:
+        """Finds k nearest points to current centroid"""
+        distances = self.get_distance(centroid, cluster_points)
+        sorted_indices = np.argsort(distances.flatten(), axis=0)
+        return cluster_points[sorted_indices][:n_neighbors]
+
+    def nn_update_centroids(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Modifies `update_centroids()` function to search subset of nearest points to centroid"""
+        old_centroids = self.centroids.copy()
+        for cluster in range(self.k):
+            in_cluster = np.where(self.clusters == cluster)
+            nearest_neighbors = self.find_nearest_neighbors(self.centroids[cluster],
+                                                            data[in_cluster], 1000)
+            distance_matrix = self.get_distance(nearest_neighbors, data[in_cluster])
+            min_wcss = np.argmin(distance_matrix.sum(axis=0))
+            self.centroids[cluster, :] = nearest_neighbors[min_wcss]
+        new_centroids = self.centroids.copy()
+        return old_centroids, new_centroids
+
+    # def _get_distances_chunked(self, data: np.ndarray, chunk_size: int) -> np.ndarray:
+    #     """Calculates pairwise distances in chunks"""
+    #     res = np.zeros((1, 2))
+    #     n_rows = data.shape[0]
+    #     for i in range(0, n_rows, chunk_size):
+    #         chunk = data[i:i + chunk_size, :]
+    #         chunk_dist = self.get_distance(chunk, data)
+    #         min_idx = np.argmin(chunk_dist.sum(axis=0))
+    #         chunk_sum = chunk_dist[:, min_idx].sum()
+    #         chunk_idx = i + min_idx
+    #         chunk_res = np.array([chunk_idx, chunk_sum])
+    #         res = np.vstack((res, chunk_res))
+    #     return res[1:, :]
+    #
+    # @staticmethod
+    # def _get_min_wcss_index(distances: np.ndarray) -> int:
+    #     """Gets key with minimum value"""
+    #     return np.where(distances[:, 1] == np.amin(distances[:, 1]))[0]
+    #
+    # def batch_update_centroids(self, data: np.ndarray,
+    #                            chunk_size: int = 6400) -> Tuple[np.ndarray, np.ndarray]:
+    #     """Modifies `update_centroids()` function to use batched pairwise distances"""
+    #     old_centroids = self.centroids.copy()
+    #     for cluster in range(self.k):
+    #         in_cluster = np.where(self.clusters == cluster)
+    #         distances = self._get_distances_chunked(data[in_cluster], chunk_size)
+    #         min_wcss = self._get_min_wcss_index(distances)
+    #         if min_wcss.shape[0] > 1:
+    #             min_wcss = min_wcss[0]
+    #         self.centroids[cluster, :] = data[in_cluster][min_wcss]
+    #     new_centroids = self.centroids.copy()
+    #     return old_centroids, new_centroids
+
     def dask_update_centroids(self, data: np.ndarray,
-                              chunk_size: int = 3000) -> Tuple[np.ndarray, np.ndarray]:
+                              chunk_size: int = 6400) -> Tuple[np.ndarray, np.ndarray]:
         """Modifies `update_centroids(_)` function to use Dask arrays"""
         old_centroids = self.centroids.copy()
         dask_array = da.from_array(data, chunks=chunk_size)
         for cluster in range(self.k):
             in_cluster = np.where(self.clusters == cluster)
             # assuming sklearn/scipy distance calcs are optimized...
-            # distance_matrix = self.get_distance_vec(dask_array[in_cluster], dask_array[in_cluster])
-            distance_matrix = scipy.spatial.distance.pdist(dask_array[in_cluster], self.method)
+            distance_matrix = squareform(pdist(dask_array[in_cluster], self.method))
             min_wcss = np.argmin(distance_matrix.sum(axis=0))
             self.centroids[cluster, :] = dask_array[in_cluster][min_wcss]
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
-    # @staticmethod
-    # def _batch_data(data: np.ndarray, batch_size: int) -> np.ndarray:
-    #     """Method to batch data by random sampling"""
-    #     indices = np.random.randint(data.shape[0], size=batch_size)
-    #     return data[indices]
-    #
-    # @staticmethod
-    # def get_n_batches(data, batch_size):
-    #     """Determine a default number of batches"""
-    #     return int((data.shape[0] / batch_size) * 1.25)
-    #
-    # def initialize_batches(self, n_batches: int, data: np.ndarray) -> None:
-    #     """Method to initialize array for batch runs"""
-    #     self.batch_runs = np.zeros((n_batches, self.k, data.shape[1]))
-    #
-    # def set_final_centroids(self):
-    #     """Set final centroids for batch runs using mode as measure of centrality"""
-    #     # subscript mode with [0] to return 2D matrix
-    #     setattr(self, 'centroids', mode(self.batch_runs).mode[0])
-    #
-    # def set_final_assignments(self, data):
-    #     """Set final cluster assignments for batch runs using final centroids"""
-    #     self.assign_cluster(data)
-    #     assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
-    #     setattr(self, 'assignments', assignments)
+    def check_final_centroids(self, data):
+        """Check that final centroids are existing data points"""
+        for centroid in self.centroids:
+            _is_in = (centroid == data).any()
+            if _is_in is False:
+                raise ValueError('Medoid cannot be assigned to non-existent point.')
 
-    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = True) -> "KMedoids":
+    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = True,
+            soft_initialize: bool = True) -> "KMedoids":
         """
         ** Uses Dask Arrays **
         Function to fit K-Means object to dataset.
@@ -126,75 +159,34 @@ class KMedoids(KMeans):
         :param data: Numpy array of data
         :param verbose: Integer indicating verbosity of printouts
         :param use_dask: Boolean to use Dask arrays for pairwise distance calcs
+        :param soft_initialize: Boolean to initialize centroids on random subset of data
         :return: self
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        # self.intialize_centroids(data)
-        self.soft_initialization(data)
+        if soft_initialize:
+            self.soft_initialization(data)
+        else:
+            self.intialize_centroids(data)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster(data)
             if use_dask:
                 old_centroids, new_centroids = self.dask_update_centroids(data)
             else:
-                old_centroids, new_centroids = self.update_centroids(data)
+                old_centroids, new_centroids = self.nn_update_centroids(data)
             if verbose > 1:
                 self.print_assignments(self.clusters, data)
             if self.meets_tolerance(old_centroids, new_centroids):
                 self.wcss = self.within_cluster(self.centroids, data)
                 self.assignments = np.append(self.clusters.reshape(-1, 1), data, axis=1)
                 print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
+                self.check_final_centroids(data)
                 break
             if verbose > 0:
                 print(f'Iteration: {i}, WCSS: {self.within_cluster(self.centroids, data)}')
             i += 1
         return self
-
-    # def fit_batch(self, data: np.ndarray, verbose: int = 1,
-    #               batch_size: int = 6400, n_batches: Optional[int] = None) -> "KMeans":
-    #     """
-    #     Function to fit K-Means object to dataset using mini-batches.
-    #     Randomly chooses initial centroids, assigns datapoints.
-    #     Updates centroids and re-assigns datapoints.
-    #     Continues until algorithm converges and WCSS is minimized.
-    #
-    #     :param data: Numpy array of data
-    #     :param verbose: Integer indicating verbosity of printouts
-    #     :param batch_size:
-    #     :param n_batches:
-    #     :return: self
-    #     """
-    #     if verbose not in {0, 1, 2}:
-    #         raise ValueError('Verbose must be set to {0, 1, 2}')
-    #     if n_batches is None:
-    #         n_batches = self.get_n_batches(data, batch_size)
-    #     self.intialize_centroids(data)
-    #     self.initialize_batches(n_batches, data)
-    #     print(f'Running {n_batches} batches of size {batch_size}...')
-    #     for n in range(n_batches):
-    #         batch_data = self._batch_data(data, batch_size)
-    #         i = 1
-    #         while i <= self.max_iter:
-    #             self.assign_cluster_vec(batch_data)
-    #             old_centroids, new_centroids = self.update_centroids(batch_data)
-    #             if verbose > 1:
-    #                 self.print_assignments(self.clusters, batch_data)
-    #             if self.meets_tolerance(old_centroids, new_centroids):
-    #                 self.wcss = self.within_cluster(self.centroids, batch_data)
-    #                 self.assignments = np.append(self.clusters.reshape(-1, 1), batch_data, axis=1)
-    #                 print(f'Converged in {i-1} iterations.  WCSS: {self.wcss}')
-    #                 break
-    #             if verbose > 0:
-    #                 print(f'Iteration: {i}, '
-    #                       f'WCSS: {self.within_cluster(self.centroids, batch_data)}')
-    #             i += 1
-    #         else:
-    #             raise RuntimeError('Failed to converge!')
-    #         self.batch_runs[n, :, :] = self.centroids
-    #     self.set_final_centroids()
-    #     self.set_final_assignments(data)
-    #     return self
 
     def plot(self) -> None:
         """Plot clusters and circles medoid in red"""
@@ -213,8 +205,8 @@ def main():
     """Main function"""
     import time
     start = time.time()
-    kmedoids = KMedoids(k=5, method='cityblock')
-    kmedoids.fit(SAMPLE_DATA, use_dask=True)
+    kmedoids = KMedoids(k=5, method='euclidean')
+    kmedoids.fit(SAMPLE_DATA, use_dask=False)
     print('Final medoids:')
     print(kmedoids.centroids)
     end = time.time()
