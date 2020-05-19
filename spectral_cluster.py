@@ -55,12 +55,14 @@ class SpectralCluster:
         return sorted_vecs[:, :self.k]
 
     def fit(self):
+        self.make_degree_matrix().make_graph_laplacian()
         kmeans = KMeans(n_clusters=self.k)
         kmeans.fit(self.get_k_eigenvectors())
         return kmeans
 
-    def plot(self):
-        pass
+    def plot(self, labels: np.ndarray) -> None:
+        for cluster in labels:
+            pass
 
 
 edges_file = 'homework1/data/edges.txt'
@@ -68,8 +70,6 @@ nodes_file = 'homework1/data/nodes.txt'
 nodes = nodes_from_file(nodes_file)
 graph = graph_from_file(edges_file)
 cluster = SpectralCluster(graph, nodes)
-cluster.make_degree_matrix()
-cluster.make_graph_laplacian()
 test = cluster.fit()
 
 idx = test.labels_

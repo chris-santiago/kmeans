@@ -98,38 +98,39 @@ class KMedoids(KMeans):
         new_centroids = self.centroids.copy()
         return old_centroids, new_centroids
 
-    # def _get_distances_chunked(self, data: np.ndarray, chunk_size: int) -> np.ndarray:
-    #     """Calculates pairwise distances in chunks"""
-    #     res = np.zeros((1, 2))
-    #     n_rows = data.shape[0]
-    #     for i in range(0, n_rows, chunk_size):
-    #         chunk = data[i:i + chunk_size, :]
-    #         chunk_dist = self.get_distance(chunk, data)
-    #         min_idx = np.argmin(chunk_dist.sum(axis=0))
-    #         chunk_sum = chunk_dist[:, min_idx].sum()
-    #         chunk_idx = i + min_idx
-    #         chunk_res = np.array([chunk_idx, chunk_sum])
-    #         res = np.vstack((res, chunk_res))
-    #     return res[1:, :]
-    #
-    # @staticmethod
-    # def _get_min_wcss_index(distances: np.ndarray) -> int:
-    #     """Gets key with minimum value"""
-    #     return np.where(distances[:, 1] == np.amin(distances[:, 1]))[0]
-    #
-    # def batch_update_centroids(self, data: np.ndarray,
-    #                            chunk_size: int = 6400) -> Tuple[np.ndarray, np.ndarray]:
-    #     """Modifies `update_centroids()` function to use batched pairwise distances"""
-    #     old_centroids = self.centroids.copy()
-    #     for cluster in range(self.k):
-    #         in_cluster = np.where(self.clusters == cluster)
-    #         distances = self._get_distances_chunked(data[in_cluster], chunk_size)
-    #         min_wcss = self._get_min_wcss_index(distances)
-    #         if min_wcss.shape[0] > 1:
-    #             min_wcss = min_wcss[0]
-    #         self.centroids[cluster, :] = data[in_cluster][min_wcss]
-    #     new_centroids = self.centroids.copy()
-    #     return old_centroids, new_centroids
+    def _get_distances_chunked(self, data: np.ndarray, chunk_size: int) -> np.ndarray:
+        """Calculates pairwise distances in chunks"""
+        res = np.zeros((1, 2))
+        n_rows = data.shape[0]
+        for i in range(0, n_rows, chunk_size):
+            chunk = data[i:i + chunk_size, :]
+            chunk_dist = self.get_distance(chunk, data)
+            min_idx = np.argmin(chunk_dist.sum(axis=0))
+            chunk_sum = chunk_dist[:, min_idx].sum()
+            chunk_idx = i + min_idx
+            chunk_res = np.array([chunk_idx, chunk_sum])
+            res = np.vstack((res, chunk_res))
+        return res[1:, :]
+
+    @staticmethod
+    def _get_min_wcss_index(distances: np.ndarray) -> int:
+        """Gets key with minimum value"""
+        keys = distances[:, 0]
+        vals = distances[:, 1]
+        i = np.argsort(vals, axis=0)
+        return int(keys[i][0])
+
+    def batch_update_centroids(self, data: np.ndarray,
+                               chunk_size: int = 6400) -> Tuple[np.ndarray, np.ndarray]:
+        """Modifies `update_centroids()` function to use batched pairwise distances"""
+        old_centroids = self.centroids.copy()
+        for cluster in range(self.k):
+            in_cluster = np.where(self.clusters == cluster)
+            distances = self._get_distances_chunked(data[in_cluster], chunk_size)
+            min_wcss = self._get_min_wcss_index(distances)
+            self.centroids[cluster, :] = data[in_cluster][min_wcss]
+        new_centroids = self.centroids.copy()
+        return old_centroids, new_centroids
 
     def dask_update_centroids(self, data: np.ndarray,
                               chunk_size: int = 6400) -> Tuple[np.ndarray, np.ndarray]:
@@ -152,7 +153,28 @@ class KMedoids(KMeans):
             if _is_in is False:
                 raise ValueError('Medoid cannot be assigned to non-existent point.')
 
-    def fit(self, data: np.ndarray, verbose: int = 1, use_dask: bool = False,
+    def _choose_initialization(self, soft_initialize: bool, data: np.ndarray,
+                               initial_points: Optional[np.ndarray]) -> callable:
+        """Method to choose initialization function"""
+        methods = {
+            True: self.soft_initialization,
+            False: self.intialize_centroids,
+        }
+        if initial_points is None:
+            return methods[soft_initialize](data)
+        return self.manual_initialization(initial_points)
+
+    def _choose_update_method(self, choice: str, data: np.ndarray) -> callable:
+        """Method to choose centroid update function"""
+        methods = {
+            None: self.update_centroids,
+            'batch': self.batch_update_centroids,
+            'knn': self.nn_update_centroids,
+            'dask': self.batch_update_centroids
+        }
+        return methods[choice](data)
+
+    def fit(self, data: np.ndarray, verbose: int = 1, update_method: Optional[str] = None,
             soft_initialize: bool = True, initial_points: np.ndarray = None) -> "KMedoids":
         """
         ** Uses Dask Arrays **
@@ -161,6 +183,8 @@ class KMedoids(KMeans):
         Updates centroids and re-assigns datapoints.
         Continues until algorithm converges and WCSS is minimized.
 
+        :param initial_points:
+        :param update_method:
         :param data: Numpy array of data
         :param verbose: Integer indicating verbosity of printouts
         :param use_dask: Boolean to use Dask arrays for pairwise distance calcs
@@ -169,20 +193,13 @@ class KMedoids(KMeans):
         """
         if verbose not in {0, 1, 2}:
             raise ValueError('Verbose must be set to {0, 1, 2}')
-        if initial_points is None:
-            if soft_initialize:
-                self.soft_initialization(data)
-            else:
-                self.intialize_centroids(data)
-        else:
-            self.manual_initialization(initial_points)
+        if update_method not in {None, 'batch', 'knn', 'dask'}:
+            raise ValueError("Accepted update methods: {None, 'batch', 'knn', 'dask'}")
+        self._choose_initialization(soft_initialize, data, initial_points)
         i = 1
         while i <= self.max_iter:
             self.assign_cluster(data)
-            if use_dask:
-                old_centroids, new_centroids = self.dask_update_centroids(data)
-            else:
-                old_centroids, new_centroids = self.nn_update_centroids(data)
+            old_centroids, new_centroids = self._choose_update_method(update_method, data)
             if verbose > 1:
                 self.print_assignments(self.clusters, data)
             if self.meets_tolerance(old_centroids, new_centroids):
@@ -214,7 +231,7 @@ def main():
     import time
     start = time.time()
     kmedoids = KMedoids(k=5, method='euclidean')
-    kmedoids.fit(SAMPLE_DATA, use_dask=False, initial_points=SAMPLE_DATA[:5, :])
+    kmedoids.fit(SAMPLE_DATA, update_method='knn')
     print('Final medoids:')
     print(kmedoids.centroids)
     end = time.time()
