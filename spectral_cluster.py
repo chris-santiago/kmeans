@@ -1,9 +1,12 @@
 """Module for basic Spectral Clustering"""
 from typing import Tuple, Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
+import scipy.spatial.distance
 from sklearn.cluster import KMeans
+from sklearn.datasets import make_moons
 
 
 def edges_from_file(filename: str) -> np.ndarray:
@@ -41,7 +44,7 @@ def nodes_from_file(filename: str) -> Tuple[np.ndarray, np.ndarray]:
         return nodes, labels
 
 
-def adjacency_matrix(edges: np.ndarray, nodes: np.ndarray) -> np.ndarray:
+def make_adjacency_matrix(edges: np.ndarray, nodes: np.ndarray) -> np.ndarray:
     """
     Creates an adjacency matrix given an array of edges and array of nodes,
     where A_ij=1 if nodes i and j are connected, otherwise 0.
@@ -68,6 +71,11 @@ def adjacency_matrix(edges: np.ndarray, nodes: np.ndarray) -> np.ndarray:
         adj_matrix[col, row] = 1
     return adj_matrix
 
+
+def make_affinity_matrix(X, e):
+    distances = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(X))
+    aff_matrix = (distances < e).astype(int)
+    return aff_matrix
 
 class SpectralCluster:
     """Class for basic spectral clustering"""
@@ -119,16 +127,31 @@ class SpectralCluster:
         sorted_vals = eig_vals[sort_idx]
         return sorted_vals, sorted_vecs
 
-    def get_features(self, k_eig_vecs: int):
+    def get_features(self, k_eig_vecs: int) -> np.ndarray:
         """Selects K eigenvectors to use as features in K-Means"""
         eig_vals, eig_vecs = self.get_eigvals_eigvecs()
         features = eig_vecs[:, :k_eig_vecs]
         setattr(self, 'features', features)
         return features
 
-    def fit(self, k_eig_vecs: Optional[int] = None):
+    def fit(self, k_eig_vecs: int) -> KMeans:
         """Instantiates and fits a K-Means object"""
         kmeans = KMeans(n_clusters=self.k)
         kmeans.fit(self.get_features(k_eig_vecs))
         setattr(self, 'model', kmeans)
         return kmeans
+
+    def plot(self, nodes: np.ndarray) -> None:
+        for cluster in range(self.k):
+            plt.scatter([x for i, x in enumerate(nodes[:, 0]) if self.model.labels_[i] == cluster],
+                        [y for i, y in enumerate(nodes[:, 1]) if self.model.labels_[i] == cluster]
+                        )
+        plt.show()
+
+
+if __name__ == '__main__':
+    X, y = make_moons(100)
+    d = make_affinity_matrix(X, .1)
+    cls = SpectralCluster(d, k=2)
+    cls.fit(2)
+    cls.plot(X)
