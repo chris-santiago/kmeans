@@ -72,10 +72,24 @@ def make_adjacency_matrix(edges: np.ndarray, nodes: np.ndarray) -> np.ndarray:
     return adj_matrix
 
 
-def make_affinity_matrix(X, e):
+def make_affinity_matrix(X: np.ndarray, e: float) -> np.ndarray:
+    """
+    Constructs an affinity matrix given a set of points, X, and epsilon value, e.
+
+    The ε-neighborhood graph:
+    Here we connect all points whose pairwise distances are smaller than ε.
+    As the distances between all connected points are roughly of the same scale (at most ε),
+    weighting the edges would not incorporate more information about the data to the graph.
+    Hence, the ε-neighborhood graph is usually considered as an unweighted graph.
+
+    :param X: An array of points
+    :param e: Threshold value for point similarity
+    :return: An affinity matrix (array)
+    """
     distances = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(X))
     aff_matrix = (distances < e).astype(int)
     return aff_matrix
+
 
 class SpectralCluster:
     """Class for basic spectral clustering"""
